@@ -69,19 +69,27 @@ async function run() {
         })
         app.post('/orders', async (req, res) => {
             const order = req.body;
-            console.log('all info', order);
+            // console.log('all info', order);
             const result = await toolsOrderCollection.insertOne(order);
             res.send(result);
 
         })
-        app.get('/orders/:email', async (req, res) => {
-            // const data = req.body
-            // const email = data
-            // console.log(email);
-            const result = await toolsCollection.find().toArray();
+        app.get('/orders', async (req, res) => {
+            const query = {};
+            const result = await toolsOrderCollection.find(query).toArray();
+            // console.log(result);
             res.send(result);
         })
 
+
+        // app.get('/orders', async (req, res) => {
+        //     const userEmail = req.query.userEmail
+        //     console.log(userEmail);
+        //     const query = { userEmail: userEmail }
+        //     console.log(query);
+        //     const orders = await toolsOrderCollection.find(query).toArray()
+        //     res.send(orders)
+        // })
 
 
 
