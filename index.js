@@ -14,6 +14,23 @@ app.use(express.json());
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.wcqbp.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
+
+function verifyJWT(req, res, next) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return res.status(401).send({ message: 'UnAuthorized access' });
+    }
+    const token = authHeader.split(' ')[1];
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
+        if (err) {
+            return res.status(403).send({ message: 'Forbidden access' })
+        }
+        req.decoded = decoded;
+        next();
+    });
+}
+
+
 async function run() {
     try {
         await client.connect();
@@ -83,11 +100,19 @@ async function run() {
             res.send(result);
 
         })
-        app.get('/orders', async (req, res) => {
-            const query = {};
-            const result = await toolsOrderCollection.find(query).toArray();
-            // console.log(result);
-            res.send(result);
+        app.get('/orders', verifyJWT, async (req, res) => {
+            const userEmail = req.query.userEmail
+            const decodedEmail = req.decoded.email;
+            if (userEmail === decodedEmail) {
+                const query = { userEmail: userEmail };
+                const result = await toolsOrderCollection.find(query).toArray();
+
+                res.send(result);
+            }
+            else {
+                return res.status(403).send({ message: 'forbidden access' });
+            }
+
         })
 
         app.post('/add-review', async (req, res) => {
@@ -104,15 +129,20 @@ async function run() {
             res.send(result);
         })
 
-        // app.get('/orders', async (req, res) => {
-        //     const userEmail = req.query.userEmail
-        //     console.log(userEmail);
-        //     const query = { userEmail: userEmail }
-        //     console.log(query);
-        //     const orders = await toolsOrderCollection.find(query).toArray()
-        //     res.send(orders)
-        // })
+        app.get('/user', verifyJWT, async (req, res) => {
+            const users = await userCollection.find().toArray();
+            res.send(users);
+        });
 
+        app.put('/user/admin/:email', verifyJWT, verifyAdmin, async (req, res) => {
+            const email = req.params.email;
+            const filter = { email: email };
+            const updateDoc = {
+                $set: { role: 'admin' },
+            };
+            const result = await userCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        })
 
 
     } finally {
