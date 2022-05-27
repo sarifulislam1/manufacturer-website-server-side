@@ -20,6 +20,7 @@ async function run() {
         const toolsCollection = client.db("manufacturer_website").collection("tools");
         const toolsOrderCollection = client.db("manufacturer_website").collection("orders");
         const userCollection = client.db("manufacturer_website").collection("users");
+        const reviewCollection = client.db("manufacturer_website").collection("reviews");
 
 
 
@@ -35,6 +36,14 @@ async function run() {
             const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
             res.send({ result, token });
         });
+
+        app.post('/tools', async (req, res) => {
+            const tools = req.body;
+            // console.log('all info', order);
+            const result = await toolsCollection.insertOne(tools);
+            res.send(result);
+
+        })
 
 
         app.get('/tools', async (req, res) => {
@@ -81,6 +90,19 @@ async function run() {
             res.send(result);
         })
 
+        app.post('/add-review', async (req, res) => {
+            const review = req.body;
+            const result = await reviewCollection.insertOne(review);
+            res.send(result);
+
+        })
+
+        app.get('/add-review', async (req, res) => {
+            const query = {};
+            const result = await reviewCollection.find(query).toArray();
+            // console.log(result);
+            res.send(result);
+        })
 
         // app.get('/orders', async (req, res) => {
         //     const userEmail = req.query.userEmail
