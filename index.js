@@ -200,6 +200,12 @@ async function run() {
             const order = await toolsOrderCollection.findOne(query);
             res.send(order);
         })
+        app.delete('/orders/:id', verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const result = await toolsOrderCollection.deleteOne(filter);
+            res.send(result);
+        })
 
 
     } finally {
