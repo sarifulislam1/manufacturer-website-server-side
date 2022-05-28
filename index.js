@@ -40,6 +40,17 @@ async function run() {
         const reviewCollection = client.db("manufacturer_website").collection("reviews");
 
 
+        const verifyAdmin = async (req, res, next) => {
+            const requester = req.decoded.email;
+            const requesterAccount = await userCollection.findOne({ email: requester });
+            if (requesterAccount.role === 'admin') {
+                next();
+            }
+            else {
+                res.status(403).send({ message: 'forbidden' });
+            }
+        }
+
 
         app.put('/user/:email', async (req, res) => {
             const email = req.params.email;
@@ -142,6 +153,13 @@ async function run() {
             };
             const result = await userCollection.updateOne(filter, updateDoc);
             res.send(result);
+        })
+
+        app.get('/admin/:email', async (req, res) => {
+            const email = req.params.email;
+            const user = await userCollection.findOne({ email: email });
+            const isAdmin = user.role === 'admin';
+            res.send({ admin: isAdmin })
         })
 
 
