@@ -3,7 +3,7 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
-
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -38,6 +38,22 @@ async function run() {
         const toolsOrderCollection = client.db("manufacturer_website").collection("orders");
         const userCollection = client.db("manufacturer_website").collection("users");
         const reviewCollection = client.db("manufacturer_website").collection("reviews");
+        const paymentCollection = client.db("manufacturer_website").collection("payments");
+
+
+
+        app.post('/create-payment-intent', verifyJWT, async (req, res) => {
+            const service = req.body;
+            const price = service.totalPrice;
+            const amount = price * 100;
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: 'usd',
+                payment_method_types: ['card']
+            });
+            res.send({ clientSecret: paymentIntent.client_secret })
+        });
+
 
 
         const verifyAdmin = async (req, res, next) => {
@@ -126,6 +142,22 @@ async function run() {
 
         })
 
+        app.patch('/orders/:id', verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            const payment = req.body;
+            const filter = { _id: ObjectId(id) };
+            const updatedDoc = {
+                $set: {
+                    paid: true,
+                    transactionId: payment.transactionId
+                }
+            }
+
+            const result = await paymentCollection.insertOne(payment);
+            const updatedOrders = await toolsOrderCollection.updateOne(filter, updatedDoc);
+            res.send(updatedOrders);
+        })
+
         app.post('/add-review', async (req, res) => {
             const review = req.body;
             const result = await reviewCollection.insertOne(review);
@@ -160,6 +192,13 @@ async function run() {
             const user = await userCollection.findOne({ email: email });
             const isAdmin = user.role === 'admin';
             res.send({ admin: isAdmin })
+        })
+
+        app.get('/order/:id', verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const order = await toolsOrderCollection.findOne(query);
+            res.send(order);
         })
 
 
